@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Ganti dengan token bot Anda
-const token = '7147604833:AAHnlNkW2pboIU_jrCPA0BnPEqkqI7ie_Ws';
+const token = '6795745264:AAGg5O9wSYLAbwuOzKIBvgz1y8GjGUUEGOo';
 const bot = new TelegramBot(token, { polling: true });
 
 const dataFilePath = path.join(__dirname, 'data.txt');
@@ -110,7 +110,6 @@ bot.onText(/\/start/, (msg) => {
         expiryDate.setDate(expiryDate.getDate() + 1);
         premiumUsers[userId] = { expiry: expiryDate.toISOString() };
         savePremiumData();
-        bot.sendMessage(chatId, 'Anjay dapet akses premium gratis selama 1 hari 🗿');
     }
 
     const message = `˚∧＿∧ 𝙒𝙄𝙉𝙏𝙀𝙍 𝙎𝙐𝙋𝙋𝙊𝙍𝙏
@@ -155,7 +154,6 @@ bot.onText(/\/start/, (msg) => {
 ┗━━──━━━━─┉━━❐`;
 
     const options = {
-        parse_mode: 'HTML',
         reply_markup: {
             inline_keyboard: [[{ text: 'Menu', callback_data: 'menu' }]]
         }
@@ -213,7 +211,6 @@ bot.on('callback_query', (callbackQuery) => {
 ┣⮕ /bc <𝘿𝙚𝙫𝙊𝙣𝙡𝙮>
 ┗━━──━━━━─┉━━❐`;
         const options = {
-            parse_mode: 'HTML',
             reply_markup: {
                 inline_keyboard: [[{ text: 'Menu', callback_data: 'menu' }]]
             }
@@ -238,70 +235,49 @@ bot.onText(/\/waifu/, (msg) => {
                     const waifuUrl = response.data;
                     bot.deleteMessage(chatId, sentMessage.message_id);
                     bot.sendPhoto(chatId, waifuUrl, {
-                        caption: 'Here is your waifu!'
+                        caption: '🥵 Here is your waifu!'
                     });
                 })
                 .catch(error => {
                     bot.deleteMessage(chatId, sentMessage.message_id);
-                    bot.sendMessage(chatId, 'Failed to fetch waifu.');
+                    bot.sendMessage(chatId, '😌 Failed to fetch waifu.');
                 });
         });
     });
 });
 
-// Fitur Instagram
-bot.onText(/\/ig (.+)/, async (msg, match) => {
+// IG command
+bot.onText(/\/ig (.*)/, (msg, match) => {
     const chatId = msg.chat.id;
-    const userId = msg.from.id;
-    const url = match[1];
-
-    // Pastikan pengguna adalah premium atau admin
-    if (!isPremium(userId, premiumUsers)) {
-        return bot.sendMessage(chatId, 'Fitur ini hanya tersedia untuk pengguna premium.');
-    }
-
-    try {
-        const response = await axios.get(`https://api.ngodingaja.my.id/api/ig?url=${encodeURIComponent(url)}`);
-        const data = response.data.hasil[0];
-
-        const options = {
-            reply_markup: {
-                inline_keyboard: [
-                    [
-                        { text: '🔥 Download Video No Watermak', callback_data: `ig_video|${data.download_link}` },
-                        { text: '⚡ Download Thumbnail', callback_data: `ig_thumbnail|${data.thumbnail_link}` }
-                    ]
-                ]
-            }
-        };
-
-        bot.sendMessage(chatId, '➡️ Pilih format yang ingin Anda unduh:', options);
-        bot.sendPhoto(chatId, data.thumbnail_link, { caption: 'Thumbnail dari video Instagram.' });
-    } catch (error) {
-        bot.sendMessage(chatId, 'Terjadi kesalahan saat memproses permintaan Instagram. Pastikan URL yang dimasukkan benar.');
-    }
-});
-
-bot.on('callback_query', async (callbackQuery) => {
-    const msg = callbackQuery.message;
-    const chatId = msg.chat.id;
-    const userId = callbackQuery.from.id;
-    const [type, url] = callbackQuery.data.split('|');
-
-    if (!isPremium(userId, premiumUsers)) {
-        return bot.answerCallbackQuery(callbackQuery.id, { text: 'Fitur ini hanya tersedia untuk pengguna premium.' });
-    }
-
-    bot.sendMessage(chatId, `Memproses permintaan Anda untuk ${type.includes('video') ? 'video' : 'thumbnail'}...`);
-
-    try {
-        if (type === 'ig_video') {
-            bot.sendVideo(chatId, url, { caption: 'success y' });
-        } else if (type === 'ig_thumbnail') {
-            bot.sendPhoto(chatId, url, { caption: 'dah' });
-        }
-    } catch (error) {
-        bot.sendMessage(chatId, 'Terjadi kesalahan saat mengirim file.');
+    const url = match[1].trim();
+    if (!url) {
+        bot.sendMessage(chatId, 'Silahkan kirimkan /ig [ url ]');
+    } else {
+        const processingMessage = bot.sendMessage(chatId, 'Processing...');
+        axios.get(`https://api.ngodingaja.my.id/api/ig?url=${url}`)
+            .then(response => {
+                const data = response.data;
+                if (data.status) {
+                    const thumbnailLink = data.hasil.thumbnail_link;
+                    const downloadLink = data.hasil.download_link;
+                    const botUsername = bot.getMe().then(botInfo => botInfo.username);
+                    botUsername.then(botName => {
+                        const caption = `Thumbnail Link: ${thumbnailLink}\nDownload Link: ${downloadLink}`;
+                        bot.sendVideo(chatId, downloadLink, { caption, parse_mode: 'Markdown' })
+                            .then(() => {
+                                processingMessage.then(sentMsg => {
+                                    bot.deleteMessage(chatId, sentMsg.message_id);
+                                });
+                            });
+                    });
+                } else {
+                    bot.sendMessage(chatId, 'Gagal mengambil informasi dari URL tersebut.');
+                }
+            })
+            .catch(error => {
+                console.error(error);
+                bot.sendMessage(chatId, 'Terjadi kesalahan saat memproses permintaan Anda.');
+            });
     }
 });
 
@@ -312,19 +288,19 @@ bot.onText(/\/spotify (.+)/, (msg, match) => {
     const url = match[1];
 
     checkAccess(msg, () => {
-        bot.sendMessage(chatId, 'Processing...').then((sentMessage) => {
-            axios.get(`https://api.ngodingaja.my.id/api/spotify?url=${encodeURIComponent(url)}`)
+        bot.sendMessage(chatId, '💡 Processing...').then((sentMessage) => {
+            axios.get(`https://sandipbaruwal.onrender.com/down?url=${encodeURIComponent(url)}`)
                 .then(response => {
                     const data = response.data;
-                    if (data && data.download_url) {
+                    if (data && data.link) {
                         const caption = `
 <b>${data.title}</b>
 <i>${data.artist}</i>
-<a href="${data.download_url}">Download</a>
+<a href="${data.link}">Download</a>
 `;
                         const options = { parse_mode: 'HTML' };
                         bot.deleteMessage(chatId, sentMessage.message_id);
-                        bot.sendPhoto(chatId, data.thumbnailUrl, {
+                        bot.sendAudio(chatId, data.link, {
                             caption: caption,
                             ...options
                         });
@@ -341,58 +317,38 @@ bot.onText(/\/spotify (.+)/, (msg, match) => {
     });
 });
 
-// Fitur TikTok
-bot.onText(/\/tiktok (.+)/, async (msg, match) => {
+// Tiktok command
+bot.onText(/\/tiktok(.*)/, (msg, match) => {
     const chatId = msg.chat.id;
-    const userId = msg.from.id;
-    const url = match[1];
-
-    // Pastikan pengguna adalah premium atau admin
-    if (!isPremium(userId, premiumUsers)) {
-        return bot.sendMessage(chatId, 'Fitur ini hanya tersedia untuk pengguna premium.');
-    }
-
-    try {
-        const response = await axios.get(`https://api.ngodingaja.my.id/api/tiktok?url=${encodeURIComponent(url)}`);
-        const data = response.data.hasil;
-
-        const options = {
-            reply_markup: {
-                inline_keyboard: [
-                    [
-                        { text: '💡 Download Video', callback_data: `video|${data.tanpawm}` },
-                        { text: '🔥 Download MP3', callback_data: `mp3|${data.musik}` }
-                    ]
-                ]
-            }
-        };
-
-        bot.sendMessage(chatId, `Pilih format yang ingin Anda unduh:\n\nJudul: ${data.judul}`, options);
-    } catch (error) {
-        bot.sendMessage(chatId, 'Terjadi kesalahan saat memproses permintaan TikTok. Pastikan URL yang dimasukkan benar.');
-    }
-});
-
-bot.on('callback_query', async (callbackQuery) => {
-    const msg = callbackQuery.message;
-    const chatId = msg.chat.id;
-    const userId = callbackQuery.from.id;
-    const [type, url] = callbackQuery.data.split('|');
-
-    if (!isPremium(userId, premiumUsers)) {
-        return bot.answerCallbackQuery(callbackQuery.id, { text: 'Fitur ini hanya tersedia untuk pengguna premium.' });
-    }
-
-    bot.sendMessage(chatId, `Memproses permintaan Anda untuk ${type === 'video' ? 'video' : 'mp3'}...`);
-
-    try {
-        if (type === 'video') {
-            bot.sendVideo(chatId, url, { caption: 'dah.' });
-        } else if (type === 'mp3') {
-            bot.sendAudio(chatId, url, { caption: 'ni anyink' });
-        }
-    } catch (error) {
-        bot.sendMessage(chatId, 'Terjadi kesalahan saat mengirim file.');
+    const url = match[1].trim();
+    if (!url) {
+        bot.sendMessage(chatId, '💡 Silahkan kirimkan /tiktok [ url ]');
+    } else {
+        const processingMessage = bot.sendMessage(chatId, 'Processing...');
+        axios.get(`https://api.ngodingaja.my.id/api/tiktok?url=${url}`)
+            .then(response => {
+                const data = response.data;
+                if (data.status) {
+                    const videoUrl = data.hasil.tanpawm;
+                    const title = data.hasil.judul;
+                    const botUsername = bot.getMe().then(botInfo => botInfo.username);
+                    botUsername.then(botName => {
+                        const caption = `**Judul**: ${title}\n\nby @${botName}`;
+                        bot.sendVideo(chatId, videoUrl, { caption, parse_mode: 'Markdown' })
+                            .then(() => {
+                                processingMessage.then(sentMsg => {
+                                    bot.deleteMessage(chatId, sentMsg.message_id);
+                                });
+                            });
+                    });
+                } else {
+                    bot.sendMessage(chatId, 'Gagal mengambil video dari URL tersebut.');
+                }
+            })
+            .catch(error => {
+                console.error(error);
+                bot.sendMessage(chatId, 'Terjadi kesalahan saat memproses permintaan Anda.');
+            });
     }
 });
 
@@ -403,7 +359,7 @@ bot.onText(/\/google (.+)/, (msg, match) => {
     const query = match[1];
 
     checkAccess(msg, () => {
-        bot.sendMessage(chatId, 'Processing...').then((sentMessage) => {
+        bot.sendMessage(chatId, '💡 Processing...').then((sentMessage) => {
             axios.get(`https://api.ngodingaja.my.id/api/gsearch?search=${encodeURIComponent(query)}`)
                 .then(response => {
                     const data = response.data;
