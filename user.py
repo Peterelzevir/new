@@ -1,4 +1,6 @@
 from telethon import TelegramClient, events
+from telethon.tl.functions.channels import LeaveChannel
+from telethon.tl.functions.contacts import BlockRequest
 
 # Ganti dengan API_ID dan API_HASH kamu
 api_id = '23207350'
